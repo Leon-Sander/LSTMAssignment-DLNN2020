@@ -112,16 +112,16 @@ class lstm():
         return np.tanh(np.dot(self.Wc,zs) + self.bc)
 
     def compute_cell_content(self, fs,c_t,ins, cc):
-        return np.dot(fs, c_t.T) + np.dot(ins,cc.T)
+        #ic("compute cell content", fs.shape, c_t.shape, ins.shape, cc.shape)
+        return fs * c_t + ins * cc
 
     def output_gate(self,z):
         #o = sigmoid(Wo * z + bo)
-        ic(self.Wo.shape)
-        ic(z.shape)
         return self.sigmoid(np.dot(self.Wo,z) + self.bo)
 
     def compute_cell_state(self, o, c_t):
-        return np.dot(np.tanh(c_t), o)
+        #ic("compute cell state", o.shape, c_t.shape)
+        return o * np.tanh(c_t)
 
     def forward(self,inputs, targets, memory):
         """
@@ -156,52 +156,56 @@ class lstm():
             for b in range(self.batch_size):
                 xs[t][inputs[t][b]][b] = 1
             
-            ic(xs[t].shape)
+            #ic(xs[t].shape)
             # convert word indices to word embeddings
             wes[t] = np.dot(self.Wex, xs[t])
-            ic(wes[t].shape)
-            ic(hs[t-1].shape)
+            #ic(wes[t].shape)
+            #ic(hs[t-1].shape)
             # LSTM cell operation
             # first concatenate the input and h to get z
             zs[t] = np.row_stack((hs[t - 1], wes[t]))
-            ic(zs[t].shape)
+            #ic(zs[t].shape)
             # compute the forget gate
             # f = sigmoid(Wf * z + bf)
             fs[t] = self.forget_gate(zs[t])
-            ic(fs[t].shape)
+            #ic(fs[t].shape)
             # compute the input gate
             # i = sigmoid(Wi * z + bi)
             ins[t] = self.input_gate(zs[t])
-            ic(ins[t].shape)
+            #ic(ins[t].shape)
             # compute the candidate memory
             #c_ = tanh(Wc * z + bc)
             cc[t] = self.candidate_content(zs[t])
-            ic(cc[t].shape)
+            #ic(cc[t].shape)
             # new memory: applying forget gate on the previous memory
             # and then adding the input gate on the candidate memory
             # c_t = f * c_(t-1) + i * c_
             c_t[t] = self.compute_cell_content(fs[t],c_t[t-1],ins[t], cc[t])
-            ic(c_t[t].shape)
+            #ic(c_t[t].shape)
             # output gate
             #o = sigmoid(Wo * z + bo)
             o[t] = self.output_gate(zs[t])
-            ic(o[t].shape)
+            #ic(o[t].shape)
             #cell state
             hs[t] = self.compute_cell_state(o[t], c_t[t])
-            ic(hs[t].shape)
+            #ic(hs[t].shape)
             # DONE LSTM
             # output layer - softmax and cross-entropy loss
+            output = np.dot(self.Why,hs[t]) + self.by
+
+
             # unnormalized log probabilities for next chars
             # softmax for probabilities for next chars
-            ps[t] = self.softmax(hs[t])
-            ic(ps[t].shape)
+            ps[t] = self.softmax(output)
+            #ic(ps[t].shape)
             # label (also one hot vector)
             ls[t] = np.zeros((self.vocab_size, self.batch_size))
             for b in range(self.batch_size):
                 ls[t][targets[t][b]][b] = 1
-            ic(ls[t].shape)
+            #ic(ls[t].shape)
             # cross-entropy loss
-            loss_t = np.sum(-np.log(ps[t]) * ls[t])
+            #ic("loss Calculation", ps[t].shape, ls[t].shape)
+            loss_t = np.sum(- np.log(ps[t])  * ls[t])
             loss += loss_t
             # loss += -np.log(ps[t][targets[t],0])
 
@@ -324,7 +328,7 @@ if option == 'test':
 
         # forward seq_length characters through the net and fetch gradient
         loss, activations, memory = model.forward(inputs, targets, (hprev, cprev))
-        ic(activations[7].shape)
+        #ic(len(activations[7]))
         hprev, cprev = memory
         n_updates += 1
         if n_updates >= max_updates:
