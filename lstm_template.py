@@ -144,7 +144,9 @@ class lstm():
 
         hprev, cprev = memory
         #xs, wes, zs,fs, ins, cc, c_t, o, hs, ps, ls = {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
-        inputs, embeddings, input_and_h_concatenateds, forget_states, input_gate_states, candidate_contents, cell_contents, output_gate_values, h_cell_state, outputs ,softmax_outputs, labels = {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
+        inputs, embeddings, input_and_h_concatenateds, forget_states, input_gate_states = {}, {}, {}, {}
+        candidate_contents, cell_contents, output_gate_values, h_cell_state, outputs = {}, {}, {}, {}, {}, {}
+        softmax_outputs, labels = {}, {}
         #hs, ys, ps, cs, zs,  c_s, ls =  , {}
 
         #hs[-1] = np.copy(hprev)
@@ -242,20 +244,38 @@ class lstm():
 
         # backward pass: compute gradients going backwards
         # Here we allocate memory for the gradients
-        dWex, dWhy = np.zeros_like(Wex), np.zeros_like(Why)
-        dby = np.zeros_like(by)
-        dWf, dWi, dWc, dWo = np.zeros_like(Wf), np.zeros_like(Wi), np.zeros_like(Wc), np.zeros_like(Wo)
-        dbf, dbi, dbc, dbo = np.zeros_like(bf), np.zeros_like(bi), np.zeros_like(bc), np.zeros_like(bo)
+        dWex, dWhy = np.zeros_like(self.Wex), np.zeros_like(self.Why)
+        dby = np.zeros_like(self.by)
+        dWf, dWi, dWc, dWo = np.zeros_like(self.Wf), np.zeros_like(self.Wi), np.zeros_like(self.Wc), np.zeros_like(self.Wo)
+        dbf, dbi, dbc, dbo = np.zeros_like(self.bf), np.zeros_like(self.bi), np.zeros_like(self.bc), np.zeros_like(self.bo)
 
         dhnext = np.zeros_like(hs[0])
         dcnext = np.zeros_like(cs[0])
 
         input_length = len(xs)
-
+        # xs: inputs
+        # wes: Word embeddings at timestamp
+        # zs: concatenated input and h
+        # fs: forget_states
+        # ins: input gate state at timestamp
+        # cc: candidate content
+        # c_t: cell content 
+        # o: output gate
+        # hs: cell state
+        # outputs
+        # ps: softmax output
+        # ls: label as one hot vector
         # back propagation through time starts here
         for t in reversed(range(input_length)):
             # computing the gradients here
-            pass
+            doutput = softmax_outputs[t] - labels[t]
+            dh_cell_state = np.dot(self.Why.T, doutput)
+            dwhy = doutput - dh_cell_state.T
+            dbo = doutput
+
+
+
+
         # clip to mitigate exploding gradients
         if clipping:
             for dparam in [dWex, dWf, dWi, dWo, dWc, dbf, dbi, dbo, dbc, dWhy, dby]:
